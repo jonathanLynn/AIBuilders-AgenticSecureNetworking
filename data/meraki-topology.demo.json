@@ -1,0 +1,12 @@
+{
+  "nodes": [
+    { "id": "wan", "label": "Internet", "kind": "WAN", "status": "ok", "x": 42, "y": 8 },
+    { "id": "mx", "label": "MX-EDGE-01", "kind": "Security appliance", "status": "ok", "x": 42, "y": 30 },
+    { "id": "core", "label": "MS-CORE-01", "kind": "Core switch", "status": "ok", "x": 42, "y": 54 },
+    { "id": "access", "label": "MS-ACCESS-03", "kind": "Access switch", "status": "alert", "x": 15, "y": 76 },
+    { "id": "ap", "label": "MR-LAB-02", "kind": "Wireless AP", "status": "ok", "x": 69, "y": 76 }
+  ],
+  "edges": [
+    { "from": "wan", "to": "mx" }, { "from": "mx", "to": "core" }, { "from": "core", "to": "access" }, { "from": "core", "to": "ap" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "tenant": "Brisbane Demo Tenant",
+  "capturedAt": "2026-09-28T08:00:00+10:00",
+  "gaps": [
+    { "title": "Broad contractor rule", "evidence": "Rule SA-104 applies Any/Any access to the Contractors identity group.", "recommendation": "Split by application group and require device posture." },
+    { "title": "Shadowed finance rule", "evidence": "Rule SA-221 is never reached because SA-180 matches the same identities and destinations first.", "recommendation": "Validate hit logs, then reorder or retire SA-221 through change control." },
+    { "title": "Stale migration exception", "evidence": "Rule SA-087 has zero observed hits in 90 days and an expired ticket reference.", "recommendation": "Confirm the owner and schedule removal with rollback monitoring." }
+  ]
+}

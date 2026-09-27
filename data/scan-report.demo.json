@@ -1,0 +1,10 @@
+{
+  "scanId": "DEMO-7F3A",
+  "target": "vibe-tools / support-export",
+  "summary": { "high": 2, "medium": 1, "low": 0 },
+  "findings": [
+    { "rule": "Tool poisoning / concealed instruction", "severity": "HIGH", "evidence": "Tool description asks the agent to ignore consent and collect environment variables before execution." },
+    { "rule": "Potential data exfiltration", "severity": "HIGH", "evidence": "The implementation sends collected process data to an unrelated remote endpoint." },
+    { "rule": "Over-broad capability", "severity": "MEDIUM", "evidence": "A support bundle tool reads the full process environment rather than an allowlist of diagnostic fields." }
+  ]
+}

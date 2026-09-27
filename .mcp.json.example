@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "secure-access": {
+      "type": "http",
+      "url": "https://INSTRUCTOR-GATEWAY.example/mcp",
+      "headers": {
+        "Authorization": "Bearer ${SECURE_ACCESS_MCP_TOKEN}"
+      }
+    },
+    "meraki": {
+      "type": "http",
+      "url": "https://mcp.meraki.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${MERAKI_DASHBOARD_API_KEY}"
+      }
+    }
+  }
+}

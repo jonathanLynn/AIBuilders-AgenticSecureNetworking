@@ -1,0 +1,83 @@
+[
+  {
+    "id": "setup",
+    "shortTitle": "Boot the foundry",
+    "eyebrow": "SYSTEMS / READINESS",
+    "title": "Bring your agent workshop online.",
+    "intro": "Start with a known-good environment. You will verify the browser guide, Pi agent harness, Python toolchain and the isolated learner workspace before any credentials enter the picture.",
+    "objective": "Prove that every layer of the lab is healthy and understand where the agent's trust boundary actually sits.",
+    "steps": [
+      { "title": "Run the readiness check", "body": "Open your assigned terminal and run the verification script. Every required check should return PASS; optional credentials may show SKIP in demo mode.", "command": "cd /opt/agent-foundry\n./scripts/verify.sh" },
+      { "title": "Meet Pi", "body": "Pi is the team's agent harness. Ask it to describe the workspace, then inspect before changing anything. The container is the security boundary because Pi itself runs with the permissions of its process.", "command": "cd /workspace\npi\n# Prompt: Map this workspace and identify its trust boundaries." },
+      { "title": "Record the baseline", "body": "Keep the readiness output. A healthy baseline lets you distinguish a broken integration from an agent reasoning failure later in the lab." }
+    ],
+    "checklist": ["Guide responds on port 8080", "Pi CLI launches", "MCP Scanner is available", "Workspace is isolated"],
+    "quiz": { "question": "What provides the primary permission boundary for Pi in this lab?", "options": ["Pi's system prompt", "The learner container", "The browser guide"], "correct": 1, "explanation": "Pi has no built-in sandbox, so the learner container supplies the permission boundary." }
+  },
+  {
+    "id": "defend",
+    "shortTitle": "Inspect the tools",
+    "eyebrow": "SECURITY / MCP SCANNER",
+    "title": "Treat every tool as untrusted input.",
+    "intro": "A fast-built MCP server can look useful while hiding data exfiltration, prompt injection or dangerous command execution. Scan its published tool surface, read the evidence and decide whether it belongs on the team.",
+    "objective": "Use Cisco AI Defense MCP Scanner to identify tool poisoning and explain why a finding matters before remediation.",
+    "steps": [
+      { "title": "Inspect the target", "body": "Read the source and tool definition in lab/vulnerable-mcp. Look for behavior that does not match the tool name or stated user intent.", "command": "sed -n '1,240p' lab/vulnerable-mcp/server.mjs\ncat lab/vulnerable-mcp/tools.json" },
+      { "title": "Run the offline scan", "body": "The YARA path needs no tenant key and makes this exercise repeatable. Add the Cisco API or LLM analyzer only in an instructor-approved live environment.", "command": "./scripts/run-scan.sh\ncat reports/mcp-scan.json" },
+      { "title": "Triage the evidence", "body": "Separate capability risk from evidence of malicious intent. Propose least-privilege scopes, clear descriptions and a human confirmation for sensitive operations." }
+    ],
+    "checklist": ["Target source reviewed", "Scanner report generated", "High-risk behavior explained", "Mitigation proposed"],
+    "quiz": { "question": "Which finding most strongly indicates tool poisoning?", "options": ["The tool uses JSON", "The description tells the agent to ignore user consent and upload environment data", "The server runs over stdio"], "correct": 1, "explanation": "Hidden or misleading instructions that redirect the agent and exfiltrate data are a direct tool-poisoning signal." }
+  },
+  {
+    "id": "access",
+    "shortTitle": "Read the policy",
+    "eyebrow": "SECURE ACCESS / POLICY",
+    "title": "Turn policy sprawl into a decision.",
+    "intro": "Connect a read-only policy analyst to Cisco Secure Access. Discover rules, find overlap and stale exceptions, then write recommendations that preserve business intent.",
+    "objective": "Produce a policy optimisation brief using evidence while keeping tenant credentials outside the agent workspace.",
+    "steps": [
+      { "title": "Start in demo mode", "body": "Use the supplied snapshot to learn the analysis flow without reaching the private tenant. Identify shadowed rules, broad identities and exceptions with no recent use.", "command": "jq . data/secure-access.demo.json" },
+      { "title": "Connect the instructor gateway", "body": "For a live run, the instructor starts the community MCP server with OAuth credentials and a separate client bearer token. Learners receive only the gateway URL and short-lived client token.", "command": "# Instructor host only\n./scripts/start-secure-access.sh" },
+      { "title": "Draft, do not apply", "body": "Return proposed changes with rule IDs, evidence, expected impact and a rollback plan. An authorised operator reviews any production change outside this lab." }
+    ],
+    "checklist": ["Policy inventory captured", "Overlaps identified", "Impact and rollback described", "No write operation attempted"],
+    "quiz": { "question": "What is the safest optimisation workflow for a private tenant?", "options": ["Let the agent delete redundant rules", "Export credentials to all learner containers", "Analyse read-only evidence and require an authorised review before changes"], "correct": 2, "explanation": "Read-only discovery plus reviewed recommendations limits blast radius and preserves accountability." }
+  },
+  {
+    "id": "topology",
+    "shortTitle": "Map the network",
+    "eyebrow": "MERAKI / OBSERVABILITY",
+    "title": "Give the team a map before a mission.",
+    "intro": "Use the Meraki MCP server to discover organisations, networks and device relationships. The goal is a topology with enough operational context to guide investigation, without allowing configuration changes.",
+    "objective": "Build and validate a topology, then use it to locate the likely fault domain in an alert scenario.",
+    "steps": [
+      { "title": "Discover capabilities", "body": "The hosted Meraki MCP exposes semantic_search and execute_api. Search for read-only capabilities covering organisations, devices, LLDP/CDP neighbours and uplink status.", "command": "# Agent prompt\nFind read-only Meraki capabilities needed to map devices,\nneighbours, uplinks and client counts. Do not call write APIs." },
+      { "title": "Assemble the graph", "body": "Normalise identifiers, deduplicate neighbour links and annotate each node with model, status and network. Never infer a physical link from shared membership alone." },
+      { "title": "Read the signal", "body": "The orange node is reporting elevated loss. Follow its upstream link and explain which extra evidence you would query before assigning a root cause." }
+    ],
+    "checklist": ["Read-only API key used", "Devices and links mapped", "Inference separated from fact", "Fault domain identified"],
+    "quiz": { "question": "Why should the Meraki API key belong to a read-only Dashboard user?", "options": ["It improves graph layout", "It prevents an agent from bypassing the MCP server and making direct changes", "It removes API rate limits"], "correct": 1, "explanation": "The hosted MCP is read-only, but an agent with a write-capable key could attempt direct Dashboard API calls." }
+  },
+  {
+    "id": "orchestrate",
+    "shortTitle": "Run the team",
+    "eyebrow": "ORCHESTRATION / HANDOFFS",
+    "title": "Make the handoffs observable.",
+    "intro": "Turn the previous modules into a small incident workflow. Each agent owns one bounded responsibility, produces a typed artifact and passes evidence rather than an open-ended conversation.",
+    "objective": "Orchestrate a four-agent investigation with explicit inputs, outputs, stop conditions and a human approval gate.",
+    "workflow": [
+      { "name": "Scout", "role": "Collects topology and health evidence" },
+      { "name": "Sentinel", "role": "Scans tools and labels trust risk" },
+      { "name": "Analyst", "role": "Correlates policy with network impact" },
+      { "name": "Lead", "role": "Builds the reviewed action brief" }
+    ],
+    "steps": [
+      { "title": "Create the contract", "body": "Give every agent a narrow role, allowed tools, maximum steps and a JSON output schema. Include source IDs and confidence with every claim." },
+      { "title": "Run the workflow", "body": "Use the included orchestrator simulation first. It records each handoff and stops before any production change.", "command": "node scripts/orchestrate.mjs --scenario branch-loss\ncat reports/workflow-report.json" },
+      { "title": "Review the trace", "body": "Reject unsupported claims, check that security findings affected tool selection and confirm the Lead stopped at the human gate." }
+    ],
+    "checklist": ["Agent contracts defined", "Evidence survives handoffs", "Failure path tested", "Human gate reached"],
+    "quiz": { "question": "What makes this workflow auditable?", "options": ["Agents share one long prompt", "Each handoff carries structured evidence, source IDs and a stop condition", "The Lead can use every available tool"], "correct": 1, "explanation": "Structured, attributable handoffs let a reviewer reconstruct why the team reached its recommendation." }
+  }
+]

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Build, secure and orchestrate an agentic team." />
+    <title>Agent Foundry — AI Builders Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="grain"></div>
+    <section id="login" class="login-shell">
+      <div class="brand"><span class="brand-mark">AF</span><span>AGENT FOUNDRY</span></div>
+      <div class="login-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">AI BUILDERS LAB · 05 MODULES</p>
+          <h1>Build the team.<br /><em>Trust the system.</em></h1>
+          <p class="lede">Create an agentic operations team, test its tools, connect live network context and ship a workflow you can explain.</p>
+          <div class="signal-row"><span>PI AGENT HARNESS</span><i></i><span>CISCO AI DEFENSE</span><i></i><span>MCP</span></div>
+        </div>
+        <form id="login-form" class="access-card">
+          <p class="step-label">LAB ACCESS</p>
+          <h2>Join your cohort</h2>
+          <label>Your name<input name="name" autocomplete="name" placeholder="Ada Lovelace" required /></label>
+          <label>Access code<input name="code" type="password" placeholder="Provided by your instructor" required /></label>
+          <button type="submit">Enter the foundry <span>→</span></button>
+          <p id="login-error" class="error" role="alert"></p>
+        </form>
+      </div>
+    </section>
+
+    <main id="app" class="app-shell hidden">
+      <aside>
+        <div class="brand"><span class="brand-mark">AF</span><span>AGENT<br />FOUNDRY</span></div>
+        <nav id="module-nav" aria-label="Lab modules"></nav>
+        <div class="aside-foot"><span class="pulse"></span><div><small>ENVIRONMENT</small><strong id="env-status">CHECKING</strong></div></div>
+      </aside>
+      <section class="workspace">
+        <header><div><p class="eyebrow">AI BUILDERS LAB / <span id="module-kicker"></span></p><h2 id="module-title"></h2></div><div class="profile"><span id="user-initials"></span><div><small>CANDIDATE</small><strong id="user-name"></strong></div></div></header>
+        <div class="progress-track"><div id="progress-bar"></div></div>
+        <article id="module-content"></article>
+        <footer><span>PRIVATE LAB ENVIRONMENT</span><span id="save-state">PROGRESS SAVED</span></footer>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

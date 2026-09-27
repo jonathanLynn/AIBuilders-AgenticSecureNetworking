@@ -1,0 +1,8 @@
+.env
+.mcp.json
+data/progress/
+reports/*.json
+reports/*.txt
+node_modules/
+.DS_Store
+users.csv
