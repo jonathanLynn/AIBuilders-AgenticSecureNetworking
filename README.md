@@ -1,140 +1,170 @@
-# Agent Foundry
+# Agent Foundry — native Python deployment
 
-Agent Foundry is a container-ready, five-module lab for up to 40 learners. Candidates use the [Pi agent harness](https://github.com/earendil-works/pi), scan an intentionally unsafe MCP tool with Cisco AI Defense MCP Scanner, analyse a Secure Access policy snapshot, map a Meraki topology, and run a small evidence-driven multi-agent workflow.
+This branch deploys one complete Agent Foundry lab for one learner on a standard Linux virtual machine. It uses Python virtual environments for the web service, Cisco AI Defense MCP Scanner and learner workspace. It does not use Docker.
 
-The package runs completely in demo mode without private credentials. Live Secure Access and Meraki exercises are instructor-controlled upgrades to the same flow.
+The browser guide, quizzes, demo scan report, Secure Access policy exercise, Meraki topology and supervised multi-agent workflow are the same as the container build.
 
-## What is included
+## Architecture
 
-- A responsive web guide with sign-in, server-side progress, interactive reports, topology, quizzes and module gates.
-- A deliberately vulnerable, inert MCP training fixture. Its exfiltration endpoint is the reserved `.invalid` domain and the fixture makes no network request.
-- Cisco AI Defense MCP Scanner 4.7.5 with offline YARA, prompt-defense and readiness scanning.
-- Pi 0.87.1 installed from `@earendil-works/pi-coding-agent`, with the pinned `pi-code` 1.0.77 extension for MCP and subagent support.
-- A deterministic four-agent orchestration exercise with evidence IDs and a human approval gate.
-- Docker deployment for one seat and a cohort provisioner for 1–40 isolated seats.
+- `/opt/agent-foundry/app` — immutable application and course content.
+- `/opt/agent-foundry/venv` — shared, read-only Python runtime containing Flask, Waitress and MCP Scanner.
+- `/srv/agent-foundry/learner` — the learner's private home, workspace, reports and Python virtual environment.
+- `/etc/agent-foundry` — root-owned service configuration and access code.
+- `/var/lib/agent-foundry` — web progress data, writable only by the service account.
+- `agent-foundry.service` — hardened systemd unit running a four-thread Waitress service on port 8080.
 
-## Quick start
+Linux user permissions provide the Pi process boundary. The shared application and scanner runtime are administrator-owned and read-only. Isolation between candidates comes from placing each deployment on its own VM.
 
-Docker is the recommended trust boundary because Pi runs with the permissions of the process that launches it.
+## Host requirements
 
-```bash
-cp .env.example .env
-# Change LAB_ACCESS_CODE in .env
-./scripts/setup.sh docker
-docker compose up -d
-```
+- A systemd Linux distribution using `apt` or `dnf.
+- Root access during installation.
+- Python 3.11.4 or newer.
+- Node.js 22.19 or newer and npm for Pi. The installer checks this requirement rather than replacing an existing Node installation.
+- Recommended per VM: 2–4 vCPU, 4–8 GB RAM and 12 GB free disk. Size the VM for the selected model client and expected scan workload.
 
-Open `http://HOST:8080`, enter a name, and use the access code from `.env`. To inspect the lab terminal:
+## Install the host
 
-```bash
-docker compose exec lab bash
-./scripts/verify.sh
-```
-
-For a native Linux install with Node.js 22.19+ and `uv` already present:
+Clone this branch on the target host, then run:
 
 ```bash
-./scripts/setup.sh native
-npm start
+sudo ./scripts/setup.sh
 ```
 
-## Provision 40 isolated seats
+The first command:
 
-Build the image once, then create a container, writable home, workspace, progress store and reports volume for each learner:
+1. Installs Python host prerequisites.
+2. Copies the application to `/opt/agent-foundry/app`.
+3. Creates `/opt/agent-foundry/venv`.
+4. Installs Flask 3.1.3, Waitress 3.0.2 and Cisco AI Defense MCP Scanner 4.8.4.
+5. Installs Pi 0.87.1 when a suitable Node/npm runtime is available.
+6. Creates the `agentlab` Linux user and its private venv, workspace and reports directory.
+7. Creates and starts the hardened systemd service.
+
+Credentials are written to `/root/agent-foundry-credentials.txt` with mode `0600`. By default, the same access code is applied as the `agentlab` Linux password. Set `ENABLE_LOCAL_PASSWORD=0` if access is managed by an SSH key or an external identity system.
+
+Open `http://HOST:8080` and sign in with your name and the VM's access code.
+
+## Deploy for 40 learners
+
+Create a clean VM image or automation template containing this repository, then run the installer once on each VM. Every VM generates its own access code and progress store.
+
+Do not clone an already-running VM after installation unless your image pipeline deletes these machine-specific files before first boot:
+
+```text
+/etc/agent-foundry/agent-foundry.env
+/root/agent-foundry-credentials.txt
+/var/lib/agent-foundry/progress/
+```
+
+The preferred sequence is to clone a base operating-system image and run `scripts/setup.sh` independently through cloud-init, Ansible, Terraform provisioning or your VM platform's guest customisation. This guarantees unique credentials and clean progress on every machine.
+
+## Learner terminal
+
+If the host allows password-based SSH, the learner can connect with the VM's account:
 
 ```bash
-./scripts/setup.sh docker
-./scripts/provision-cohort.sh 40
+ssh agentlab@HOST
+source ~/.venv/bin/activate
+/opt/agent-foundry/app/scripts/verify.sh
 ```
 
-The script writes `users.csv` with URLs and random access codes, mode `0600`. Ports default to `9001–9040`; set `BASE_PORT` to move the range. Each seat is capped at 1.5 CPU, 2 GB RAM and 256 processes, so a full cohort should have roughly 64 vCPU, 96 GB RAM and 120 GB free disk if everyone may run Pi concurrently. Reduce limits only after a rehearsal with the intended model and exercises.
+The installer does not edit `sshd_config`. For a public or remote event, prefer short-lived SSH certificates, individual public keys, or an identity-aware bastion. Avoid exposing port 8080 directly to the Internet; place TLS and your normal authentication proxy in front of it.
 
-Learners enter their container with:
-
-```bash
-docker exec -it agent-foundry-01 bash
-```
-
-Place TLS and your identity-aware proxy in front of the port range for a remote event. The built-in access code is a cohort admission control, not an Internet-facing identity system.
+The installer does not edit `sshd_config`. Store each VM's credential file in the instructor's approved secret-sharing system and distribute it only to that VM's learner.
 
 ## Lab flow
 
-1. **Boot the foundry** — run readiness checks and learn the container trust boundary.
-2. **Inspect the tools** — scan a suspicious MCP tool definition and interpret the report.
-3. **Read the policy** — analyse Secure Access policies in demo or live, read-only mode.
-4. **Map the network** — discover Meraki capabilities and build a topology.
-5. **Run the team** — pass structured evidence across Scout, Sentinel, Analyst and Lead agents, stopping at human review.
+1. **Boot the foundry** — activate the private venv, verify Pi and MCP Scanner, and identify the Linux permission boundary.
+2. **Inspect the tools** — scan the intentionally unsafe MCP tool definition and explain the evidence.
+3. **Read the policy** — analyse a Secure Access snapshot or use the instructor's authenticated, read-only gateway.
+4. **Map the network** — use Meraki MCP discovery to construct a topology and locate a fault domain.
+5. **Run the team** — pass structured evidence through Scout, Sentinel, Analyst and Lead, ending at human approval.
 
-The default access code is `agent-team-2026` for local evaluation. Change it before a cohort.
+The unsafe fixture never performs a network request and uses the reserved `.invalid` domain.
 
-## Live Secure Access
+## Run the scanner
 
-Use the community server on an instructor-controlled host. Do not copy the Secure Access OAuth client secret into learner containers.
+From a learner account:
 
 ```bash
-git clone https://github.com/CiscoDevNet/secure-access-mcp-community.git /opt/secure-access-mcp-community
-cd /opt/secure-access-mcp-community
-uv venv --python 3.11
-uv pip install -r requirements.txt
+source ~/.venv/bin/activate
+/opt/agent-foundry/app/scripts/run-scan.sh
+python -m json.tool ~/reports/mcp-scan.json
+```
+
+The default scan uses offline YARA, prompt-defense and readiness analysers. Cisco AI Defense or LLM credentials remain optional and must be distributed through an instructor-controlled secret mechanism.
+
+## Live Secure Access MCP
+
+Keep the Secure Access OAuth key and secret on an instructor host. Install the community server into its own Python virtual environment:
+
+```bash
+sudo git clone https://github.com/CiscoDevNet/secure-access-mcp-community.git /opt/secure-access-mcp-community
+sudo python3 -m venv /opt/secure-access-mcp-community/.venv
+sudo /opt/secure-access-mcp-community/.venv/bin/pip install -r /opt/secure-access-mcp-community/requirements.txt
 
 export SECURE_ACCESS_API_KEY='...'
 export SECURE_ACCESS_API_SECRET='...'
 export SECURE_ACCESS_MCP_TOKEN='a-long-random-client-token'
-cd /path/to/agent-foundry
-./scripts/start-secure-access.sh
+sudo -E /opt/agent-foundry/app/scripts/start-secure-access.sh
 ```
 
-The wrapper binds to loopback, enables destructive-action confirmation, and redacts PII. Publish it to learner agents only through an authenticated TLS gateway. Prefer API scopes limited to policy and reports. The exercise produces recommendations; it does not apply them.
+The wrapper binds to loopback, enables destructive-action confirmation and redacts PII. Publish it only through an authenticated TLS gateway. Learners should receive a short-lived gateway token, never the tenant OAuth secret.
 
-## Live Meraki
+## Live Meraki MCP with Pi
 
-Cisco's hosted MCP endpoint is `https://mcp.meraki.com/mcp` and exposes two workflow tools: `semantic_search` and `execute_api`. Pi intentionally does not ship MCP integration in its core; this image adds the third-party `pi-code` extension, pinned to 1.0.77, which loads Claude-compatible MCP configuration after the candidate approves project trust. Review extension source before changing the pin.
+The hosted Meraki MCP endpoint is `https://mcp.meraki.com/mcp`. It is read-only, but the Dashboard API identity must also be read-only because an agent could try to call the API directly with an exposed key.
 
-Copy the supplied example, set the environment variables in the learner container, and keep the API key tied to a read-only Meraki Dashboard user:
+Pi intentionally keeps MCP outside its core. Learners can install the pinned `pi-code` extension after reviewing its source:
 
 ```bash
-cp .mcp.json.example .mcp.json
+pi install npm:pi-code@1.0.77
+cp /opt/agent-foundry/app/.mcp.json.example ~/workspace/.mcp.json
 export MERAKI_DASHBOARD_API_KEY='read-only-lab-key'
-pi
-# Approve this lab project when Pi asks, then run /mcp.
+cd ~/workspace && pi
+# Approve the project, then run /mcp.
 ```
 
-For a 40-person class, do not distribute one production key. Use a lab organisation with read-only users or broker the requests through an instructor gateway. Meraki applies rate limits per organisation, so stagger the live exercise and cache inventory where your terms and data policy permit.
+Across 40 VMs, use a dedicated lab organisation with individual read-only identities or an instructor gateway. Stagger live discovery so the cohort does not exhaust organisation-level API limits.
 
-## Scanner modes
+## Orchestration
 
-The repeatable learner exercise is offline:
+Run the deterministic Python workflow first:
 
 ```bash
-./scripts/run-scan.sh
+python /opt/agent-foundry/app/scripts/orchestrate.py --scenario branch-loss
 ```
 
-It scans `lab/vulnerable-mcp/tools.json` and writes `reports/mcp-scan.json`. The browser includes a stable demo report so the quiz still works before tools are installed. An instructor may add the Cisco API or an approved LLM analyser by setting the relevant environment variables from `.env.example`; never put those keys in the browser bundle.
+After authenticating Pi to an approved model, run four real model turns:
+
+```bash
+python /opt/agent-foundry/app/scripts/orchestrate_pi.py
+```
+
+Both write handoffs under `~/reports` and stop at human approval.
 
 ## Operations
 
-Run the local checks with:
-
 ```bash
-npm test
-node --check server.mjs
-node scripts/orchestrate.mjs --scenario branch-loss
+systemctl status agent-foundry
+journalctl -u agent-foundry -f
+curl -fsS http://127.0.0.1:8080/api/health
 ```
 
-After configuring a Pi model, run the same workflow with four real model turns:
+Run the application tests inside the shared venv:
 
 ```bash
-node scripts/orchestrate-pi.mjs
+cd /opt/agent-foundry/app
+/opt/agent-foundry/venv/bin/python -m unittest discover -s tests -v
 ```
 
-The live runner writes one handoff per agent under `reports/` and still instructs the Lead to stop at human approval.
+Upgrade by pulling this branch in the source checkout and rerunning `sudo ./scripts/setup.sh`. The installer replaces immutable application files, updates the shared venv and restarts the service. It preserves `/etc/agent-foundry`, `/var/lib/agent-foundry` and learner homes.
 
-Progress lives in a per-seat Docker volume. The app stores no private tenant credentials and serves demo JSON only. Back up the volumes if completion records matter; for formal assessment, send progress events to your LMS or identity-backed datastore rather than relying on this lightweight store.
+## Boundaries
 
-## Design boundaries
-
-- The package is a working workshop foundation, not a production LMS.
-- Live tenant access stays behind instructor-managed MCP gateways.
-- Meraki uses read-only Dashboard identities.
-- Agents can recommend production changes but the supplied workflow stops at human approval.
-- Scanner results are evidence for review, not a guarantee that a tool is safe.
+- This is a workshop platform, not a production LMS.
+- Linux accounts isolate learner files, but they share the host kernel and network.
+- Live tenant access belongs behind instructor-managed MCP gateways.
+- Scanner results support review; they do not prove that a tool is safe.
+- Agents recommend production actions and the supplied workflow stops before execution.

@@ -1,0 +1,31 @@
+[Unit]
+Description=Agent Foundry lab guide
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agentfoundry
+Group=agentfoundry
+WorkingDirectory=/opt/agent-foundry/app
+EnvironmentFile=/etc/agent-foundry/agent-foundry.env
+ExecStart=/opt/agent-foundry/venv/bin/waitress-serve --listen=0.0.0.0:8080 --threads=4 app:app
+Restart=on-failure
+RestartSec=3
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+ReadWritePaths=/var/lib/agent-foundry
+CapabilityBoundingSet=
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

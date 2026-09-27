@@ -7,12 +7,12 @@
     "intro": "Start with a known-good environment. You will verify the browser guide, Pi agent harness, Python toolchain and the isolated learner workspace before any credentials enter the picture.",
     "objective": "Prove that every layer of the lab is healthy and understand where the agent's trust boundary actually sits.",
     "steps": [
-      { "title": "Run the readiness check", "body": "Open your assigned terminal and run the verification script. Every required check should return PASS; optional credentials may show SKIP in demo mode.", "command": "cd /opt/agent-foundry\n./scripts/verify.sh" },
-      { "title": "Meet Pi", "body": "Pi is the team's agent harness. Ask it to describe the workspace, then inspect before changing anything. The container is the security boundary because Pi itself runs with the permissions of its process.", "command": "cd /workspace\npi\n# Prompt: Map this workspace and identify its trust boundaries." },
+      { "title": "Run the readiness check", "body": "Open your assigned Linux account, activate its private Python environment, and run the verification script. Every required check should return PASS.", "command": "source ~/.venv/bin/activate\n/opt/agent-foundry/app/scripts/verify.sh" },
+      { "title": "Meet Pi", "body": "Pi is the team's agent harness. Ask it to describe the workspace, then inspect before changing anything. The learner Linux account and VM are the security boundaries because Pi runs with the permissions of its process.", "command": "cd ~/workspace\npi\n# Prompt: Map this workspace and identify its trust boundaries." },
       { "title": "Record the baseline", "body": "Keep the readiness output. A healthy baseline lets you distinguish a broken integration from an agent reasoning failure later in the lab." }
     ],
     "checklist": ["Guide responds on port 8080", "Pi CLI launches", "MCP Scanner is available", "Workspace is isolated"],
-    "quiz": { "question": "What provides the primary permission boundary for Pi in this lab?", "options": ["Pi's system prompt", "The learner container", "The browser guide"], "correct": 1, "explanation": "Pi has no built-in sandbox, so the learner container supplies the permission boundary." }
+    "quiz": { "question": "What provides the primary permission boundary for Pi in this lab?", "options": ["Pi's system prompt", "The learner Linux account and VM", "The browser guide"], "correct": 1, "explanation": "Pi has no built-in sandbox, so the dedicated Linux account and single-user VM supply the permission boundary." }
   },
   {
     "id": "defend",
@@ -22,8 +22,8 @@
     "intro": "A fast-built MCP server can look useful while hiding data exfiltration, prompt injection or dangerous command execution. Scan its published tool surface, read the evidence and decide whether it belongs on the team.",
     "objective": "Use Cisco AI Defense MCP Scanner to identify tool poisoning and explain why a finding matters before remediation.",
     "steps": [
-      { "title": "Inspect the target", "body": "Read the source and tool definition in lab/vulnerable-mcp. Look for behavior that does not match the tool name or stated user intent.", "command": "sed -n '1,240p' lab/vulnerable-mcp/server.mjs\ncat lab/vulnerable-mcp/tools.json" },
-      { "title": "Run the offline scan", "body": "The YARA path needs no tenant key and makes this exercise repeatable. Add the Cisco API or LLM analyzer only in an instructor-approved live environment.", "command": "./scripts/run-scan.sh\ncat reports/mcp-scan.json" },
+      { "title": "Inspect the target", "body": "Read the source and tool definition in the installed lab. Look for behavior that does not match the tool name or stated user intent.", "command": "sed -n '1,240p' /opt/agent-foundry/app/lab/vulnerable-mcp/server.mjs\ncat /opt/agent-foundry/app/lab/vulnerable-mcp/tools.json" },
+      { "title": "Run the offline scan", "body": "The YARA path needs no tenant key and makes this exercise repeatable. Add the Cisco API or LLM analyzer only in an instructor-approved live environment.", "command": "/opt/agent-foundry/app/scripts/run-scan.sh\ncat ~/reports/mcp-scan.json" },
       { "title": "Triage the evidence", "body": "Separate capability risk from evidence of malicious intent. Propose least-privilege scopes, clear descriptions and a human confirmation for sensitive operations." }
     ],
     "checklist": ["Target source reviewed", "Scanner report generated", "High-risk behavior explained", "Mitigation proposed"],
@@ -37,7 +37,7 @@
     "intro": "Connect a read-only policy analyst to Cisco Secure Access. Discover rules, find overlap and stale exceptions, then write recommendations that preserve business intent.",
     "objective": "Produce a policy optimisation brief using evidence while keeping tenant credentials outside the agent workspace.",
     "steps": [
-      { "title": "Start in demo mode", "body": "Use the supplied snapshot to learn the analysis flow without reaching the private tenant. Identify shadowed rules, broad identities and exceptions with no recent use.", "command": "jq . data/secure-access.demo.json" },
+      { "title": "Start in demo mode", "body": "Use the supplied snapshot to learn the analysis flow without reaching the private tenant. Identify shadowed rules, broad identities and exceptions with no recent use.", "command": "python -m json.tool /opt/agent-foundry/app/data/secure-access.demo.json" },
       { "title": "Connect the instructor gateway", "body": "For a live run, the instructor starts the community MCP server with OAuth credentials and a separate client bearer token. Learners receive only the gateway URL and short-lived client token.", "command": "# Instructor host only\n./scripts/start-secure-access.sh" },
       { "title": "Draft, do not apply", "body": "Return proposed changes with rule IDs, evidence, expected impact and a rollback plan. An authorised operator reviews any production change outside this lab." }
     ],
@@ -74,7 +74,7 @@
     ],
     "steps": [
       { "title": "Create the contract", "body": "Give every agent a narrow role, allowed tools, maximum steps and a JSON output schema. Include source IDs and confidence with every claim." },
-      { "title": "Run the workflow", "body": "Use the included orchestrator simulation first. It records each handoff and stops before any production change.", "command": "node scripts/orchestrate.mjs --scenario branch-loss\ncat reports/workflow-report.json" },
+      { "title": "Run the workflow", "body": "Use the included Python orchestrator simulation first. It records each handoff and stops before any production change.", "command": "python /opt/agent-foundry/app/scripts/orchestrate.py --scenario branch-loss\ncat ~/reports/workflow-report.json" },
       { "title": "Review the trace", "body": "Reject unsupported claims, check that security findings affected tool selection and confirm the Lead stopped at the human gate." }
     ],
     "checklist": ["Agent contracts defined", "Evidence survives handoffs", "Failure path tested", "Human gate reached"],

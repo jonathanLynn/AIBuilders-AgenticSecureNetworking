@@ -1,7 +1,0 @@
-.git
-.env
-users.csv
-node_modules
-data/progress
-reports
-.DS_Store
